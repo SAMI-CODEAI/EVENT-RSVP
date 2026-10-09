@@ -73,26 +73,67 @@ export const handler = async (event) => {
       Retrieve RSVP counts (“Yes” / “No”) from DynamoDB.
       Each count is stored as RESPONSE#Yes or RESPONSE#No items.
     */
-    if (method === "GET" && path.startsWith("/stats/")) {
-      const eventId = pathParams.event_id;
+    // if (method === "GET" && path.startsWith("/stats/")) {
+    //   const eventId = pathParams.event_id;
       
-      const responses = ['Yes', 'No'];
-      const keys = responses.map(r => ({
-        pk: { S: `EVENT#${eventId}` },
-        sk: { S: `RESPONSE#${r}` },
-      }));
+    //   const responses = ['Yes', 'No'];
+    //   const keys = responses.map(r => ({
+    //     pk: { S: `EVENT#${eventId}` },
+    //     sp: { S: `RESPONSE#${r}` },
+    //   }));
 
-      const result = await dynamo.send(new BatchGetItemCommand({
-        RequestItems: { "event-rsvp-counts": { Keys: keys } } // Replace "event-rsvp-counts" with your own DynamoDB table name
-      }));
+    //   const result = await dynamo.send(new BatchGetItemCommand({
+    //     RequestItems: { "event-rsvp-responses": { Keys: keys } } // Replace "event-rsvp-responsesnts" with your own DynamoDB table name
+    //   }));
 
-      const items = result.Responses?.["event-rsvp-counts"] || []; // Replace "event-rsvp-counts" with your own DynamoDB table name
-      const counts = { Yes: 0, No: 0 };
-      for (const item of items) {
-        const key = item.sk.S.split("#")[1];
-        counts[key] = Number(item.count?.N || 0);
+    //   const items = result.Responses?.["event-rsvp-responses"] || []; // Replace "event-rsvp-responsesnts" with your own DynamoDB table name
+    //   const counts = { Yes: 0, No: 0 };
+    //   for (const item of items) {
+    //     const key = item.sp.S.split("#")[1];
+    //     counts[key] = Number(item.count?.N || 0);
+    //   }
+
+    //   return json(counts);
+    // }
+
+    if (method === "GET" && path.startsWith("/stats/")) {
+      // const eventId = pathParams.event_id;
+      const eventId = path.split("/")[2];
+
+if (!eventId) {
+  return json({
+    message: "Missing event_id in path",
+    receivedPath: path,
+    pathParameters: pathParams
+  }, 400);
+}
+    
+      if (!eventId) {
+        return json({ message: "Missing event_id in path" }, 400);
       }
-
+    
+      const result = await dynamo.send(new QueryCommand({
+        TableName: "event-rsvp-responses",
+        KeyConditionExpression: "pk = :pk AND begins_with(sp, :prefix)",
+        ExpressionAttributeValues: {
+          ":pk": { S: `EVENT#${eventId}` },
+          ":prefix": { S: "RESPONSE#" }
+        },
+        ConsistentRead: true
+      }));
+    
+      const counts = { Yes: 0, No: 0 };
+    
+      for (const item of result.Items ?? []) {
+        const responseType = item.sp?.S?.split("#")[1];
+    
+        if (responseType === "Yes" || responseType === "No") {
+          counts[responseType] = Number(item.count?.N ?? 0);
+        }
+      }
+    
+      console.log("RSVP stats:", { eventId, counts });
+    
       return json(counts);
     }
 
@@ -118,24 +159,27 @@ export const handler = async (event) => {
           TransactItems: [
             {
               Put: {
-                TableName: "event-rsvp-counts", // Replace "event-rsvp-counts" with your own DynamoDB table name
+                TableName: "event-rsvp-responses", // Replace "event-rsvp-responsesnts" with your own DynamoDB table name
                 Item: {
                   pk:        { S: `EVENT#${event_id}` },
-                  sk:        { S: `RESPONDENT#${email}` },
+                  sp:        { S: `RESPONDENT#${email}` },
                   full_name: { S: full_name },
                   email:     { S: email },
                   response:  { S: response },
                   timestamp: { N: String(now) }
                 },
-                ConditionExpression: "attribute_not_exists(pk) AND attribute_not_exists(sk)"
+                // ConditionExpression: "attribute_not_exists(pk) AND attribute_not_exists(sp)"
+
+                ConditionExpression: "attribute_not_exists(sp)"
+
               }
             },
             {
               Update: {
-                TableName: "event-rsvp-counts", // Replace "event-rsvp-counts" with your own DynamoDB table name
+                TableName: "event-rsvp-responses", // Replace "event-rsvp-responsesnts" with your own DynamoDB table name
                 Key: {
                   pk: { S: `EVENT#${event_id}` },
-                  sk: { S: `RESPONSE#${response}` }
+                  sp: { S: `RESPONSE#${response}` }
                 },
                 UpdateExpression: "ADD #count :one",
                 ExpressionAttributeNames: { "#count": "count" },
@@ -147,16 +191,30 @@ export const handler = async (event) => {
 
         return json({ message: "RSVP recorded!" }, 200);
 
-      } catch (err) {
-        if (err.name === "TransactionCanceledException" || err.name === "ConditionalCheckFailedException") {
-          return json({
-            message: "You have already RSVP'd for this event with this email!",
-            code: "DUPLICATE_RSVP"
-          }, 409);
-        }
-        console.error('DynamoDB error:', err);
-        return json({ error: err.message }, 500);
-      }
+      // } catch (err) {
+      //   if (err.name === "TransactionCanceledException" || err.name === "ConditionalCheckFailedException") {
+      //     return json({
+      //       message: "You have already RSVP'd for this event with this email!",
+      //       code: "DUPLICATE_RSVP"
+      //     }, 409);
+      //   }
+      //   console.error('DynamoDB error:', err);
+      //   return json({ error: err.message }, 500);
+      // }
+    } catch (err) {
+      console.error("RSVP TRANSACTION FAILURE:", JSON.stringify({
+        name: err.name,
+        message: err.message,
+        cancellationReasons: err.CancellationReasons,
+        code: err.Code,
+        statusCode: err.$metadata?.httpStatusCode
+      }, null, 2));
+    
+      return json({
+        message: "RSVP transaction failed. Check CloudWatch logs.",
+        error: err.name
+      }, 500);
+    }
     }
 
     /*
@@ -170,19 +228,19 @@ export const handler = async (event) => {
       const eventId = pathParams.event_id;
       const responseType = queryParams.response; 
       
-      let keyCondition = "pk = :pk AND begins_with(sk, :prefix)";
+      let keyCondition = "pk = :pk AND begins_with(sp, :prefix)";
       let expressionValues = {
         ":pk": { S: `EVENT#${eventId}` },
         ":prefix": { S: "RESPONDENT#" }
       };
       
       if (responseType) {
-        keyCondition = "pk = :pk AND begins_with(sk, :prefix)";
+        keyCondition = "pk = :pk AND begins_with(sp, :prefix)";
         expressionValues[":prefix"] = { S: `RESPONDENT#` };
       }
 
       const result = await dynamo.send(new QueryCommand({
-        TableName: "event-rsvp-counts", // Replace "event-rsvp-counts" with your own DynamoDB table name
+        TableName: "event-rsvp-responses", // Replace "event-rsvp-responsesnts" with your own DynamoDB table name
         KeyConditionExpression: keyCondition,
         ExpressionAttributeValues: expressionValues,
       }));
