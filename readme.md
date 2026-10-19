@@ -61,7 +61,7 @@ This repository includes the application source code and a practical guide to it
 
 ### 2.1 High-level diagram
 
-```mermaid
+mermaid
 flowchart LR
     U([👤 User's browser])
 
@@ -95,7 +95,7 @@ flowchart LR
     L --> VPCE --> DDB
     L -. logs .-> CW
     IAM -. permissions .-> L
-```
+
 
 ### 2.2 Two independent layers
 
