@@ -61,7 +61,7 @@ This repository includes the application source code and a practical guide to it
 
 ### 2.1 High-level diagram
 
-mermaid
+```mermaid
 flowchart LR
     U([👤 User's browser])
 
@@ -95,7 +95,7 @@ flowchart LR
     L --> VPCE --> DDB
     L -. logs .-> CW
     IAM -. permissions .-> L
-
+```
 
 ### 2.2 Two independent layers
 
@@ -110,7 +110,7 @@ The browser address bar shows the **CloudFront domain**. In DevTools → *Networ
 
 ### 2.3 Data architecture
 
-```mermaid
+mermaid
 erDiagram
     EVENTS_MYSQL {
         varchar event_id PK
@@ -136,7 +136,7 @@ erDiagram
     }
     EVENTS_MYSQL ||--o{ DYNAMODB_ITEM_ATTENDEE : "event_id (logical link)"
     EVENTS_MYSQL ||--o{ DYNAMODB_ITEM_COUNTER : "event_id (logical link)"
-```
+
 
 There is **no foreign key** between MySQL and DynamoDB. The shared `event_id` string is the logical link, maintained by the Lambda code.
 
