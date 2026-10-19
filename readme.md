@@ -1,11 +1,10 @@
-# 🎉 Event RSVP — Serverless Full-Stack App on AWS
+# Event RSVP — Serverless Full-Stack Application on AWS
 
-A beginner-friendly, **fully serverless, full-stack event RSVP application** built entirely on AWS. Visitors browse upcoming events, open an event to see its details, submit an RSVP (Yes / No), and watch **live attendance counts** and the attendee list update immediately.
+A **serverless, full-stack event RSVP application** built on AWS. Visitors can browse upcoming events, view event details, submit an RSVP (Yes or No), and see attendance counts and attendee lists update in real time.
 
-This repository is not only the application code. It is also a **hands-on AWS learning record**: every service used, every console option chosen, and *why* it was chosen, is documented below.
+This repository includes the application source code and a practical guide to its AWS implementation. It documents the services used, configuration choices, and the rationale behind them.
 
 > **Region used throughout:** `ap-southeast-1` (Asia Pacific – Singapore)
-> **Based on:** the *Event RSVP AWS Tutorial* by Darla David Devid ([darladvd/event-rsvp-aws-tutorial](https://github.com/darladvd/event-rsvp-aws-tutorial)), re-built, tested and documented by me.
 
 ---
 
@@ -36,7 +35,7 @@ This repository is not only the application code. It is also a **hands-on AWS le
 11. [Cost control, pause and cleanup](#11-cost-control-pause-and-cleanup)
 12. [Security review and improvements](#12-security-review-and-improvements)
 13. [Local development](#13-local-development)
-14. [Credits](#14-credits)
+
 
 ---
 
@@ -1305,9 +1304,3 @@ The front end talks to the **real AWS backend**, so the AWS resources above must
 
 ---
 
-## 14. Credits
-
-- Original tutorial and project design: **Darla David Devid** — [github.com/darladvd/event-rsvp-aws-tutorial](https://github.com/darladvd/event-rsvp-aws-tutorial)
-- Rebuilt, configured, documented and extended by **[SAMI-CODEAI](https://github.com/SAMI-CODEAI)**
-
-If this helped you, ⭐ the repo and try extending it: add event creation, an admin dashboard, Cognito sign-in, email confirmations with SES, or a custom domain with Route 53 + ACM.
